@@ -12,11 +12,16 @@ Dependencies (install once):
     pip install pandas numpy matplotlib seaborn scipy scikit-learn
 ═══════════════════════════════════════════════════════════════════════════════
 """
+"""
+The file contains a professional module header, version information, and descriptive docstrings, 
+which aligns well with good coding standards and improves project documentation quality.
+"""
 
 # ─── 0. IMPORTS ──────────────────────────────────────────────────────────────
 import warnings
-warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore") # All warnings are currently suppressed globallycwhile this helps keep the output clean
 
+# The import statements are grouped logically and follow a consistent structure
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -31,6 +36,10 @@ from sklearn.feature_selection import mutual_info_classif
 DATA_PATH   = "alzheimers_disease_data.csv"   # ← update path if needed
 OUTPUT_DIR  = "."                              # ← figures saved here
 
+""" 
+Variable names such as DX_LABS, PAL_DX, and LABEL_MAPS are concise and consistent 
+adding a brief comment explaining these abbreviations would improve readability for new team members reviewing the code
+"""
 PAL_DX  = {0: "#2196F3", 1: "#E91E63"}
 DX_LABS = {0: "No Alzheimer's", 1: "Alzheimer's"}
 
@@ -45,6 +54,12 @@ plt.rcParams.update({"axes.spines.top": False, "axes.spines.right": False})
 
 
 # ─── 2. DATA LOADING & CLEANING ──────────────────────────────────────────────
+"""
+The data loading process is clear and the removal of non-informative columns is appropriate.
+Consider adding validation to check whether the dataset file exists and whether required columns such as
+Diagnosis, Age, Gender, and Ethnicity are present before proceeding.
+This would make the pipeline more robust against dataset changes.
+"""
 def load_data(path: str) -> pd.DataFrame:
     """Load and pre-process the Alzheimer's dataset."""
     df = pd.read_csv(path)
@@ -54,6 +69,7 @@ def load_data(path: str) -> pd.DataFrame:
     df = df.drop(columns=drop_cols)
 
     # Convenience derived columns
+    # The age grouping is appropriate for demographic analysis.
     df["AgeGroup"] = pd.cut(
         df["Age"],
         bins=[59, 64, 69, 74, 79, 84, 90],
@@ -63,6 +79,10 @@ def load_data(path: str) -> pd.DataFrame:
 
 
 # ─── 3. DATA PROFILING ───────────────────────────────────────────────────────
+"""
+Class distribution is reported clearly since the project includes fairness evaluation
+it may also be useful to display class balance across demographic subgroups such as Gender and Ethnicity
+"""
 def profile_data(df: pd.DataFrame) -> None:
     """Print a comprehensive textual summary of the dataset."""
     print("=" * 70)
@@ -90,11 +110,16 @@ def profile_data(df: pd.DataFrame) -> None:
 # ─── 4. FIGURE HELPERS ───────────────────────────────────────────────────────
 def _save(fig: plt.Figure, name: str, dpi: int = 150) -> None:
     path = f"{OUTPUT_DIR}/{name}.png"
-    fig.savefig(path, dpi=dpi, bbox_inches="tight")
+    fig.savefig(path, dpi=dpi, bbox_inches="tight") # consider validating that the output directory exists before saving figures
     plt.close(fig)
     print(f"  ✔ Saved → {path}")
 
 
+"""
+Several plotting functions contain substantial amounts of logic
+Splitting larger functions into smaller helper functions would make
+the code easier to test, maintain, and debug in future iterations.
+"""
 # ─── 5. FIGURE 1 — DATA OVERVIEW ─────────────────────────────────────────────
 def fig1_overview(df: pd.DataFrame) -> None:
     """Target distribution, age, gender, ethnicity & education split."""
@@ -177,6 +202,10 @@ def fig1_overview(df: pd.DataFrame) -> None:
 
 
 # ─── 6. FIGURE 2 — CONTINUOUS DISTRIBUTIONS (Violin + Box) ──────────────────
+"""
+
+"""
+
 def fig2_continuous_distributions(df: pd.DataFrame) -> None:
     """Violin + box plots for all continuous features by diagnosis."""
     cont_feats = [
@@ -210,6 +239,12 @@ def fig2_continuous_distributions(df: pd.DataFrame) -> None:
         ax.set_xticks([0, 1]); ax.set_xticklabels(["No AD", "AD"], fontsize=9)
         ax.set_title(feat, fontweight="bold", fontsize=10)
 
+
+        """
+        The Mann-Whitney U test is appropriate for comparing non-parametric distributions
+        between diagnosis groups. Consider adding validation to ensure both groups contain
+        sufficient observations before running the statistical test.
+        """
         # Mann-Whitney U test annotation
         _, p = mannwhitneyu(data[1], data[0])
         plab = "p<0.001" if p < 0.001 else f"p={p:.3f}"
@@ -224,6 +259,10 @@ def fig2_continuous_distributions(df: pd.DataFrame) -> None:
 
 
 # ─── 7. FIGURE 3 — BINARY FEATURE PREVALENCE ─────────────────────────────────
+"""
+Good defensive programming practice. The code checks whether expected features
+exist before plotting, reducing the risk of runtime errors
+"""
 def fig3_binary_prevalence(df: pd.DataFrame) -> None:
     """Grouped bar charts of binary feature rates per diagnosis class + χ²."""
     bin_feats = [
@@ -264,6 +303,10 @@ def fig3_binary_prevalence(df: pd.DataFrame) -> None:
 
 
 # ─── 8. FIGURE 4 — CORRELATION HEATMAP ───────────────────────────────────────
+"""
+The correlation heatmap uses annotations for all values
+This works well for the current dataset size, but performance may decrease considerably for larger datasets.
+"""
 def fig4_correlation_heatmap(df: pd.DataFrame) -> None:
     """Full Pearson correlation heatmap (lower triangle)."""
     fig, ax = plt.subplots(figsize=(18, 14))
@@ -315,6 +358,11 @@ def fig5_feature_importance(df: pd.DataFrame) -> None:
 
 
 # ─── 10. FIGURE 6 — BIAS & FAIRNESS ──────────────────────────────────────────
+    """
+    It is good to see fairness metrics included in the EDA.
+    Consider handling cases where a subgroup contains very few records, as fairness ratios
+    calculated from very small samples may produce unstable or misleading results.
+    """
 def fig6_bias_fairness(df: pd.DataFrame) -> None:
     """
     Demographic parity analysis across ethnicity, gender, education & age.
@@ -335,6 +383,11 @@ def fig6_bias_fairness(df: pd.DataFrame) -> None:
             ax.text(b.get_x() + b.get_width() / 2, b.get_height() + 0.5,
                     f"{b.get_height():.1f}%", ha="center", fontsize=9, fontweight="bold")
 
+"""
+The demographic subgroup definitions appear in multiple places throughout the script.
+Consider moving these into a reusable helper function to reduce code duplication and improve maintainability.
+"""
+    
     # A – Ethnicity
     eth_rate = df.groupby("Ethnicity")["Diagnosis"].mean() * 100
     _rate_bar(axes[0, 0],
@@ -535,6 +588,10 @@ def fig8_outlier_detection(df: pd.DataFrame) -> pd.DataFrame:
                                    columns=["n_outliers_IQR"])
 
 
+"""
+This section contains important processing logic
+Adding a brief explanatory comment would make the workflow easier to follow for future developers and reviewers
+"""
 # ─── 13. FIGURE 9 — LIFESTYLE & MEDICAL RISK FACTORS ────────────────────────
 def fig9_risk_factors(df: pd.DataFrame) -> None:
     """BMI, comorbidities, lifestyle vs cognitive score scatterplots."""
@@ -641,7 +698,10 @@ def fig10_statistical_tests(df: pd.DataFrame) -> pd.DataFrame:
         "MemoryComplaints", "BehavioralProblems", "Confusion", "Disorientation",
         "PersonalityChanges", "DifficultyCompletingTasks", "Forgetfulness"
     ]
-
+"""
+Appropriate statistical tests have been selected for continuous and categorical variables
+It may be useful to add validation for empty groups before running the tests to prevent unexpected runtime errors.
+"""
     rows = []
     for f in cont_feats:
         a, b_ = df[df.Diagnosis == 0][f], df[df.Diagnosis == 1][f]
@@ -715,6 +775,10 @@ def fig10_statistical_tests(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ─── 15. FIGURE 11 — PAIRPLOT ─────────────────────────────────────────────────
+"""
+Sampling 500 records is a sensible approach for reducing rendering time.
+Consider checking that the dataset contains at least 500 records before sampling to avoid potential exceptions on smaller datasets.
+"""
 def fig11_pairplot(df: pd.DataFrame) -> None:
     """Pairplot of key predictors, sampled for rendering speed."""
     key_feats = ["MMSE", "FunctionalAssessment", "ADL", "SleepQuality", "Age"]
@@ -888,9 +952,13 @@ def print_key_findings(df: pd.DataFrame) -> None:
 
 
 # ─── 18. MAIN ─────────────────────────────────────────────────────────────────
+ """
+    The dataset is loaded successfully, however it would be beneficial to validate that key columns
+    such as Diagnosis, Age, Gender, and Ethnicity exist before continuing.
+    """
 def main():
     print("Loading data …")
-    df = load_data(DATA_PATH)
+    df = load_data(DATA_PATH) 
 
     print("Profiling data …")
     profile_data(df)
@@ -918,6 +986,14 @@ def main():
     print_key_findings(df)
     print("\nAll done. 12 figures + 2 CSV tables saved.")
 
+"""
+The use of the __main__ guard follows good Python coding practices 
+and allows the module to be imported safely without executing the pipeline automatically
+"""
 
 if __name__ == "__main__":
     main()
+"""
+The file is well organised into clearly numbered sections,
+making it easy to follow the EDA workflow from data loading through fairness analysis and explainability groundwork.
+"""
